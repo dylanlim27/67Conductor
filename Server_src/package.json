@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@huggingface/transformers": "^3.7.6",
+    "body-parser": "^2.2.0",
     "express": "^5.1.0",
     "expressjs": "^1.0.1",
     "node-llama-cpp": "^3.14.0"
