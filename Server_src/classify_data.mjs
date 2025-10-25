@@ -26,7 +26,7 @@ let inputs = await processor(img, prompt, {
 const output = await imageTextToTextModel.generate({
     ...
     inputs,
-    max_new_tokens: 32,
+    max_new_tokens: 64,
     do_sample: false,
     streamer: new TextStreamer(processor.tokenizer, {
         skip_prompt: true,
