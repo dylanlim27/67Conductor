@@ -6,11 +6,7 @@ from mediapipe.tasks.python import vision
 
 import math
 import cv2
-<<<<<<< HEAD
-import sys
-=======
 import numpy as np
->>>>>>> 8aed047 (Camera working for M series Macs)
 
 # ---------------- Helper Functions ---------------- #
 
@@ -82,16 +78,8 @@ def display_batch_of_images_with_gestures_and_hand_landmarks(images, results):
 # ---------------- Main Camera Code ---------------- #
 
 def main():
-<<<<<<< HEAD
-    if len(sys.argv) < 2:
-        print("Usage: python main.py <camera_index>")
-        return
-    # Initialize the camera stream.
-    cap = cv2.VideoCapture(int(sys.argv[1]))
-=======
-    # Open the first available camera (0 usually built-in)
+    # Open first available camera
     cap = cv2.VideoCapture(0)
->>>>>>> 8aed047 (Camera working for M series Macs)
 
     plt.rcParams.update({
         'axes.spines.top': False,
@@ -120,22 +108,15 @@ def main():
                 print("Failed to capture image from camera.")
                 break
 
-<<<<<<< HEAD
-            # Convert the frame to RGB format. And flip for better experience.
-            frame_rgb = cv2.flip(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), 1)
-
-            # STEP 3: Load the input image.
-=======
-            # Ensure proper format for MediaPipe
+            # Ensure proper format
             frame = ensure_bgr_uint8(frame)
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
->>>>>>> 8aed047 (Camera working for M series Macs)
+
             image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_rgb)
 
             # Recognize gestures
             recognition_result = recognizer.recognize(image)
 
-            # Prepare annotated image
             annotated_image = frame_rgb.copy()
             title = "No gestures detected."
 
@@ -168,7 +149,6 @@ def main():
             annotated_image_bgr = ensure_bgr_uint8(annotated_image_bgr)
             cv2.imshow("Gesture Recognition", annotated_image_bgr)
 
-            # Exit on 'q'
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
