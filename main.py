@@ -112,20 +112,19 @@ def main():
                 print("Failed to capture image from camera.")
                 break
 
-
+            frame = ensure_bgr_uint8(frame)
             # Convert the frame to RGB format. And flip for better experience.
             frame_rgb = cv2.flip(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), 1)
 
             # STEP 3: Load the input image.
             # Ensure proper format for MediaPipe
-            frame = ensure_bgr_uint8(frame)
+            
 
             image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_rgb)
 
             # Recognize gestures
             recognition_result = recognizer.recognize(image)
 
-            # Prepare annotated image
             annotated_image = frame_rgb.copy()
             title = "No gestures detected."
 
@@ -158,7 +157,6 @@ def main():
             annotated_image_bgr = ensure_bgr_uint8(annotated_image_bgr)
             cv2.imshow("Gesture Recognition", annotated_image_bgr)
 
-            # Exit on 'q'
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
