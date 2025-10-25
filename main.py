@@ -10,12 +10,16 @@ from mediapipe.tasks.python import vision
 
 import math
 import cv2
+import sys
 
 
 
 def main():
+    if len(sys.argv) < 2:
+        print("Usage: python main.py <camera_index>")
+        return
     # Initialize the camera stream.
-    cap = cv2.VideoCapture(1)
+    cap = cv2.VideoCapture(int(sys.argv[1]))
 
     plt.rcParams.update({
         'axes.spines.top': False,
@@ -45,8 +49,8 @@ def main():
                 print("Failed to capture image from camera.")
                 break
 
-            # Convert the frame to RGB format.
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            # Convert the frame to RGB format. And flip for better experience.
+            frame_rgb = cv2.flip(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), 1)
 
             # STEP 3: Load the input image.
             image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_rgb)
@@ -198,9 +202,4 @@ def display_batch_of_images_with_gestures_and_hand_landmarks(images, results):
     plt.show()
 
 if __name__ == "__main__":
-<<<<<<< HEAD
-    oldmain()
-=======
-    
     main()
->>>>>>> 5b59aaa (add camera to main(finger))
