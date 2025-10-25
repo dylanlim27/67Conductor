@@ -18,9 +18,9 @@ def main():
   if len(sys.argv) < 2:
     print("Usage: python poseture.py <camera_index>")
     return 
-  GPTgenerated_camera_streaming_only_can_quit_with_ctrlc();
+  main2()
 
-def GPTgenerated_camera_streaming_only_can_quit_with_ctrlc():
+def main2():
       # STEP 2: Create a PoseLandmarker object.
   base_options = python.BaseOptions(model_asset_path='pose_landmarker_heavy.task')
   options = vision.PoseLandmarkerOptions(
