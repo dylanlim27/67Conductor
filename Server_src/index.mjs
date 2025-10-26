@@ -39,7 +39,9 @@ app.post("/start", async (req, res) => {
     return res.status(400).json({response: "Missing preferences in request body"});
   }
   let preferences = req.body.preferences.toString();
-  let response = await generator([message, {role: "user", content: "Provide the user with a single clothing article based on the preferences provided: " + preferences}]);
+  let response = await generator([message, {role: "user", content: "Provide the user with a single clothing article based on the preferences provided: " + preferences}], {
+    max_new_tokens: 128,
+  });
   //let response = await session.prompt("Provide the user with a single clothing article based on the preferences provided: " + preferences);
   return res.status(200).json({response: response[0].generated_text.at(-1).content});
 
@@ -48,7 +50,9 @@ app.post("/like", async (req, res) => {
   if (!req.body.article && typeof req.body.article !== String) {
     return res.status(400).send("Missing clothing article name");
   }
-  let response = await generator([message, {role: "user", content: "The user liked this article suggestion, keep this in mind and provide another clothing article based on their preferences."}]);
+  let response = await generator([message, {role: "user", content: "The user liked this article suggestion, keep this in mind and provide another clothing article based on their preferences."}], {
+    max_new_tokens: 128,
+  });
   //let response = await session.prompt("The user liked this article suggestion, keep this in mind and provide another clothing article based on their preferences.");
   return res.status(200).json({response: response[0].generated_text.at(-1).content});
 })
@@ -56,7 +60,9 @@ app.post("/dislike", async (req, res) => {
   if (!req.body.article && typeof req.body.article !== String) {
     return res.status(400).send("Missing clothing article name");
   }
-  let response = await generator([message, {role: "user", content: "The user disliked this article suggestion, keep this in mind and provide another clothing article based on their preferences."}]);
+  let response = await generator([message, {role: "user", content: "The user disliked this article suggestion, keep this in mind and provide another clothing article based on their preferences."}], {
+    max_new_tokens: 128,
+  });
 
   //let response = await session.prompt("The user dislike this article suggestion, keep this in mind and provide another clothing article based on their preferences.");
 
