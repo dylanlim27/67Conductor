@@ -4,21 +4,6 @@
 
 ---
 
-## Project Structure
-
-The project is structured into three main subprojects and an FFI experiment folder:
-
-```
-├── CompVision/          # Python & Haskell Computer Vision (MediaPipe Pose Tracking)
-├── Server_src/          # Node.js Express server running SmolLM2 clothing recommender
-├── frontend_website/    # Astro static site with interactive swiping UI & tfjs models
-├── haskell/             # Haskell <-> Python FFI and Subprocess experiments
-├── requirements.txt     # Global Python requirements file
-└── README.md            # Root documentation
-```
-
----
-
 ## Subprojects Overview
 
 ### 1. Computer Vision (`CompVision`)
@@ -111,21 +96,3 @@ A playground containing examples of Haskell and Python interoperability:
    cd haskell
    python generated.py
    ```
-
----
-
-## Key Refactoring Changes Made
-
-1. **Bug Fixes**:
-   - Fixed type validation checks (`typeof ... !== Array` and `typeof ... !== String` bugs) in the Express server.
-   - Fixed syntax and corrupted brace nesting inside `model.astro`'s camera toggles.
-   - Fixed undefined variable crashes (`haskell_proc` in `generated.py` and `outputs` in `classify_data.mjs`).
-   - Fixed invalid global `return` statements in `test_call.py`.
-2. **Haskell & FFI Stability**:
-   - Replaced "pseudo-Haskell" placeholder in `haslib.hs` with a complete UDP listener.
-   - Created a Windows `DllMain` entry point in `StartEnd.c` for automatic GHC RTS initialization, resolving access violations and null pointer crashes in ctypes FFI calls.
-3. **Integration**:
-   - Redesigned `index.astro` with a premium dark-mode aesthetic.
-   - Connected the frontend swiping card interface directly to the Express backend (incorporating CORS support in Express), resolving disconnected API endpoints.
-4. **Cleanliness**:
-   - Removed platform-specific compiled Haskell binaries (`.exe`, `.o`, `.hi`) from tracking and globally ignored them in the root `.gitignore`.
