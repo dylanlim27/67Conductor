@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import * as fs from "fs";
 import * as path from 'path';
 import * as body_parser from "body-parser";
@@ -29,13 +30,14 @@ const session = new LlamaChatSession({
 const app = express();
 const port = 8080;
 
+app.use(cors());
 app.use(express.json());
 app.use(express.static(path.resolve("./static/html")));
 
 
 
 app.post("/start", async (req, res) => {
-  if (!req.body.preferences && typeof req.body.preferences !== Array) {
+  if (!req.body.preferences || !Array.isArray(req.body.preferences)) {
     return res.status(400).json({response: "Missing preferences in request body"});
   }
   let preferences = req.body.preferences.toString();
@@ -45,18 +47,18 @@ app.post("/start", async (req, res) => {
 
 });
 app.post("/like", async (req, res) => {
-  if (!req.body.article && typeof req.body.article !== String) {
+  if (!req.body.article || typeof req.body.article !== "string") {
     return res.status(400).send("Missing clothing article name");
   }
-  let response = await generator([message, {role: "user", content: "The user liked this article suggestion, keep this in mind and provide another clothing article based on their preferences."}]);
+  let response = await generator([message, {role: "user", content: "The user liked this article suggestion: " + req.body.article + ". Keep this in mind and provide another clothing article based on their preferences."}]);
   //let response = await session.prompt("The user liked this article suggestion, keep this in mind and provide another clothing article based on their preferences.");
   return res.status(200).json({response: response[0].generated_text.at(-1).content});
 })
 app.post("/dislike", async (req, res) => {
-  if (!req.body.article && typeof req.body.article !== String) {
+  if (!req.body.article || typeof req.body.article !== "string") {
     return res.status(400).send("Missing clothing article name");
   }
-  let response = await generator([message, {role: "user", content: "The user disliked this article suggestion, keep this in mind and provide another clothing article based on their preferences."}]);
+  let response = await generator([message, {role: "user", content: "The user disliked this article suggestion: " + req.body.article + ". Keep this in mind and provide another clothing article based on their preferences."}]);
 
   //let response = await session.prompt("The user dislike this article suggestion, keep this in mind and provide another clothing article based on their preferences.");
 

@@ -149,7 +149,8 @@ async function startCamera() {
         statusDiv.textContent = `Error accessing camera: ${error.message}`;
         console.error(error);
     }
-} true;
+}
+
 // Stop the camera and pose detection
 function stopCamera() {
     if (video.srcObject) {
@@ -168,18 +169,6 @@ function stopCamera() {
     isRunning = false;
     statusDiv.textContent = 'Camera stopped.';
 
-            stopBtn.disabled = false;
-            modelSelect.disabled = true;
-            isRunning = true;
-            const label = chosenDevice.label || `Camera ${nextIndex + 1}`;
-            statusDiv.textContent = `Camera started (${label}). Detecting poses...`;
-            detectPose();
-        };
-    } catch (error) {
-        statusDiv.textContent = `Error accessing camera: ${error.message}`;
-        console.error(error);
-    }
-}
     // Clear the canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 }

@@ -1,0 +1,5 @@
+LIBRARY HSLib
+EXPORTS
+    hs_add
+    hs_reverse
+    hs_free

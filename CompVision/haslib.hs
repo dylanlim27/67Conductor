@@ -1,82 +1,99 @@
 {-# LANGUAGE OverloadedStrings #-}
--- udp_gesture.hs
--- Minimal UDP receiver that expects JSON frames from Python and notifies back when pattern matched.
+{-# LANGUAGE DeriveGeneric #-}
+module Main where
 
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as BL
 import Network.Socket
-import Network.BSD
-import Control.Monad (forever, when)
+import Control.Monad (forever)
 import Data.Aeson
-import Data.Time.Clock.POSIX (getPOSIXTime)
-import Control.Concurrent (forkIO, threadDelay)
-import Data.Text (Text, unpack)
-import qualified Data.HashMap.Strict as HM
-import Data.Maybe (fromMaybe)
+import GHC.Generics
+import qualified Data.Map.Strict as M
 import Text.Regex.TDFA ((=~))
+import System.IO
 
--- change these to match your env or use CLI/env vars
-pythonHost :: String
-pythonHost = "127.0.0.1"
+data LandmarkPoint = LandmarkPoint
+  { x :: Double
+  , y :: Double
+  , z :: Double
+  } deriving (Show, Generic)
 
-pythonNotifyPort :: Int
-pythonNotifyPort = 5006
+instance FromJSON LandmarkPoint
 
-listenPort :: Int
-listenPort = 5005
+data ObjectWrapper = ObjectWrapper
+  { ts :: Double
+  , landmarks :: M.Map String LandmarkPoint
+  } deriving (Show, Generic)
 
--- decode JSON frames like: {"ts":..., "landmarks": {"11":{"x":0.1,"y":0.2,"z":0.0}, ... } }
-data LandmarkPoint = LandmarkPoint { lx :: Double, ly :: Double, lz :: Double } deriving Show
+instance FromJSON ObjectWrapper
 
-instance FromJSON LandmarkPoint where
-  parseJSON = withObject "landmark" $ \o ->
-    LandmarkPoint <$> o .: "x" <*> o .: "y" <*> o .: "z"
+classifyAB :: M.Map String LandmarkPoint -> Maybe Char
+classifyAB lms = do
+  l_sh <- y <$> M.lookup "11" lms
+  r_sh <- y <$> M.lookup "12" lms
+  l_wr <- y <$> M.lookup "15" lms
+  r_wr <- y <$> M.lookup "16" lms
+  let up_margin = 0.03
+      down_margin = 0.03
+      left_up = l_wr < (l_sh - up_margin)
+      left_down = l_wr > (l_sh + down_margin)
+      right_up = r_wr < (r_sh - up_margin)
+      right_down = r_wr > (r_sh + down_margin)
+  if left_up && right_down
+    then Just 'A'
+    else if left_down && right_up
+           then Just 'B'
+           else Nothing
 
--- Very small helper: extract a landmark index from the JSON object
-lookupIdx :: Object -> String -> Maybe LandmarkPoint
-lookupIdx obj key = case HM.lookup (fromString key) obj of
-  Just val -> case fromJSON val of
-    Success p -> Just p
-    _ -> Nothing
-  _ -> Nothing
-
-fromString :: String -> Data.Text.Text
-fromString = Data.Text.pack
+sendNotify :: String -> Int -> String -> IO ()
+sendNotify host port msg = do
+  addrinfos <- getAddrInfo (Just (defaultHints { addrSocketType = Datagram })) (Just host) (Just (show port))
+  let serveraddr = head addrinfos
+  sock <- socket (addrFamily serveraddr) Datagram defaultProtocol
+  _ <- sendTo sock (B.pack msg) (addrAddress serveraddr)
+  close sock
 
 main :: IO ()
 main = withSocketsDo $ do
-  addrinfos <- getAddrInfo (Just (defaultHints { addrFlags = [AI_PASSIVE] })) Nothing (show listenPort)
+  let pythonHost = "127.0.0.1"
+      pythonNotifyPort = 5006
+      listenPort = 5005
+  addrinfos <- getAddrInfo (Just (defaultHints { addrFlags = [AI_PASSIVE], addrSocketType = Datagram })) Nothing (Just (show listenPort))
   let serveraddr = head addrinfos
   sock <- socket (addrFamily serveraddr) Datagram defaultProtocol
   bind sock (addrAddress serveraddr)
   putStrLn $ "Listening for frames on UDP port " ++ show listenPort
-  seqVar <- return "" -- simple string buffer for 'A'/'B' sequence
-  loop sock seqVar
+  hFlush stdout
+  loop sock ""
   where
-    loop sock seqStr = forever $ do
-      (msg, _addr) <- recvFrom sock 4096
-      -- parse JSON
+    pythonHost = "127.0.0.1"
+    pythonNotifyPort = 5006
+    loop sock seqStr = do
+      (msg, _) <- recvFrom sock 4096
       let mobj = decode (BL.fromStrict msg) :: Maybe ObjectWrapper
       case mobj of
-        Nothing -> putStrLn "bad json"
+        Nothing -> do
+          putStrLn "bad json"
+          hFlush stdout
+          loop sock seqStr
         Just obj -> do
-          let lms = landmarks obj
-          -- compute A/B using shoulder/wrist y (same indices as Python): 11,12, 15,16
-          let ma = classifyAB lms
-          case ma of
+          case classifyAB (landmarks obj) of
             Nothing -> do
-              -- you may want to reset sequence or manage stable-frame detection here
-              return ()
+              loop sock seqStr
             Just code -> do
-              let newSeq = seqStr ++ [code]
-              putStrLn $ \"Got code: \" ++ [code] ++ \" seq=\" ++ newSeq
-              -- run regex
-              let regex = \"^(?:AB){2,}(?:A)?$|^(?:BA){2,}(?:B)?$\" :: String
-              when (newSeq =~ regex) $ do
-                putStrLn $ \"Pattern matched: \" ++ newSeq
-                -- send notify to Python
-                sendNotify pythonHost pythonNotifyPort (\"PATTERN:\" ++ newSeq)
-              -- choose how to manage seqStr (e.g., keep last N or reset). This is simplified.
-              return ()
--- Note: You must implement JSON wrapper types and functions here; the above is pseudo-Haskell
--- to show the architecture and where to run the regex. Use aeson to parse JSON and network to send UDP.
+              let newSeq = if null seqStr || last seqStr /= code
+                             then seqStr ++ [code]
+                             else seqStr
+              putStrLn $ "Got code: " ++ [code] ++ " seq=" ++ newSeq
+              hFlush stdout
+              let regex = "^(?:AB){2,}(?:A)?$|^(?:BA){2,}(?:B)?$" :: String
+                  matched = newSeq =~ regex :: Bool
+              if matched
+                then do
+                  putStrLn $ "Pattern matched: " ++ newSeq
+                  hFlush stdout
+                  sendNotify pythonHost pythonNotifyPort ("PATTERN:" ++ newSeq)
+                  loop sock ""
+                else do
+                  let trimmedSeq = if length newSeq > 10 then drop (length newSeq - 10) newSeq else newSeq
+                  loop sock trimmedSeq

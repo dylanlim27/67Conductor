@@ -33,7 +33,6 @@ let inputs = await processor(img, prompt, {
 });
 
 const output = await imageTextToTextModel.generate({
-    ...
     inputs,
     max_new_tokens: 64,
     length_penalty: -9999999.0,
@@ -45,7 +44,7 @@ const output = await imageTextToTextModel.generate({
 });
 
 const decoded = processor.batch_decode(
-  outputs.slice(null, [inputs.input_ids.dims.at(-1), null]),
+  output.slice(null, [inputs.input_ids.dims.at(-1), null]),
   { skip_special_tokens: true },
 );
 console.log(decoded[0]);

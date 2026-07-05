@@ -3,13 +3,53 @@ import mediapipe as mp
 import subprocess
 import sys
 import time
+import os
 
 # Initialize MediaPipe
 mp_pose = mp.solutions.pose
 pose = mp_pose.Pose(static_image_mode=False, min_detection_confidence=0.5)
 mp_drawing = mp.solutions.drawing_utils
 
+# Find paths
+haskell_dir = os.path.dirname(os.path.abspath(__file__))
+exe_name = "angle_calc.exe" if sys.platform == "win32" else "angle_calc"
+exe_path = os.path.join(haskell_dir, exe_name)
+hs_path = os.path.join(haskell_dir, "angle_calc.hs")
 
+# Compile angle_calc.hs if the executable doesn't exist
+if not os.path.exists(exe_path) and os.path.exists(hs_path):
+    print("Compiling Haskell angle_calc utility...")
+    try:
+        subprocess.run(["ghc", "-O2", hs_path], cwd=haskell_dir, check=True)
+        print("Haskell utility compiled successfully.")
+    except Exception as e:
+        print(f"Warning: Could not compile Haskell program: {e}")
+        print("Will attempt to run via runghc dynamically.")
+
+# Start Haskell process
+try:
+    if os.path.exists(exe_path):
+        haskell_proc = subprocess.Popen(
+            [exe_path],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            text=True,
+            bufsize=1,  # Line buffered
+            cwd=haskell_dir
+        )
+    else:
+        haskell_proc = subprocess.Popen(
+            ["runghc", "angle_calc.hs"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            text=True,
+            bufsize=1,
+            cwd=haskell_dir
+        )
+except Exception as e:
+    print(f"Error starting Haskell subprocess: {e}")
+    print("Please install GHC (Haskell Platform) or ensure 'runghc' is available.")
+    sys.exit(1)
 
 def compute_angle_from_landmarks(landmarks, idx1, idx2, idx3):
     # Extract normalized x,y (MediaPipe gives [0,1])
@@ -19,13 +59,16 @@ def compute_angle_from_landmarks(landmarks, idx1, idx2, idx3):
     
     # Send to Haskell via stdin
     line = f"{p1[0]} {p1[1]} {p2[0]} {p2[1]} {p3[0]} {p3[1]}"
-    haskell_proc.stdin.write(line + '\n')
-    haskell_proc.stdin.flush()
-    
-    # Read result from stdout
-    angle_str = haskell_proc.stdout.readline().strip()
-    if angle_str:
-        return float(angle_str)
+    try:
+        haskell_proc.stdin.write(line + '\n')
+        haskell_proc.stdin.flush()
+        
+        # Read result from stdout
+        angle_str = haskell_proc.stdout.readline().strip()
+        if angle_str:
+            return float(angle_str)
+    except Exception as e:
+        print(f"Subprocess communication error: {e}")
     return None  # Error case
 
 # Camera loop
@@ -56,5 +99,8 @@ while cap.isOpened():
 # Cleanup
 cap.release()
 cv2.destroyAllWindows()
-haskell_proc.stdin.close()
-haskell_proc.wait()  # Ensure Haskell exits cleanly
+try:
+    haskell_proc.stdin.close()
+    haskell_proc.wait()  # Ensure Haskell exits cleanly
+except Exception:
+    pass

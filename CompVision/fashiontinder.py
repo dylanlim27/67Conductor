@@ -5,15 +5,25 @@ import pygame
 import logging
 
 pygame.mixer.init()
-like_sound = pygame.mixer.Sound('sounds/like.wav')
-dislike_sound = pygame.mixer.Sound('sounds/dislike.mp3')
+
+try:
+    like_sound = pygame.mixer.Sound('lib/sounds/like.wav')
+except Exception as e:
+    logging.warning("Could not load like.wav: %s", e)
+    like_sound = None
+
+try:
+    dislike_sound = pygame.mixer.Sound('lib/sounds/dislike.mp3')
+except Exception as e:
+    logging.warning("Could not load dislike.mp3: %s", e)
+    dislike_sound = None
 
 def likeClothes():
-    if not pygame.mixer.get_busy():
+    if like_sound and not pygame.mixer.get_busy():
         like_sound.play()
 
 def dislikeClothes():
-    if not pygame.mixer.get_busy():
+    if dislike_sound and not pygame.mixer.get_busy():
         dislike_sound.play()
 
 mp_hands = mp.solutions.hands
